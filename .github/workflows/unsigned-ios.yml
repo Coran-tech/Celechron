@@ -1,0 +1,59 @@
+name: Build unsigned Celechron IPA
+on:
+  push:
+    branches: [build/unsigned-ios-724e54a]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  ipa:
+    runs-on: macos-15
+    timeout-minutes: 50
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: maxim-lobanov/setup-xcode@v1
+        with:
+          xcode-version: '26'
+      - uses: subosito/flutter-action@v2
+        with:
+          flutter-version: '3.44.1'
+          cache: true
+      - name: Get dependencies and test calendar handling
+        run: |
+          flutter pub get
+          flutter test --no-pub test/calendar_config_parser_test.dart
+      - name: Build device archive without signing
+        run: flutter build ipa --release --no-pub --no-codesign
+      - name: Package iPhone app with widgets and companion watch app
+        shell: bash
+        run: |
+          set -euo pipefail
+          cd "$RUNNER_TEMP"
+          mkdir Payload
+          app=Payload/Runner.app
+          ditto "$GITHUB_WORKSPACE/build/ios/archive/Runner.xcarchive/Products/Applications/Runner.app" "$app"
+          watch="$app/Watch/CelechronWatch.app"
+          for bundle in "$app" "$app/PlugIns/WidgetExtensions.appex" "$watch" "$watch/PlugIns/WatchWidgetExtensions.appex"; do
+            exe=$(/usr/libexec/PlistBuddy -c 'Print :CFBundleExecutable' "$bundle/Info.plist")
+            test -x "$bundle/$exe"
+          done
+          # Vendored frameworks can carry signatures even with Xcode signing off.
+          while IFS= read -r -d '' bundle; do
+            if codesign -d "$bundle" 2>/dev/null; then
+              codesign --remove-signature "$bundle"
+            fi
+          done < <(find "$app" -depth \( -name '*.dylib' -o -name '*.framework' -o -name '*.appex' -o -name '*.app' \) -print0)
+          test -z "$(find Payload \( -name embedded.mobileprovision -o -name _CodeSignature \) -print)"
+          if codesign -d "$app" 2>/dev/null; then exit 1; fi
+          ditto -c -k --norsrc --keepParent Payload "$GITHUB_WORKSPACE/Celechron-unsigned.ipa"
+          unzip -tq "$GITHUB_WORKSPACE/Celechron-unsigned.ipa"
+      - uses: actions/upload-artifact@v4
+        with:
+          name: Celechron-unsigned
+          path: Celechron-unsigned.ipa
+          if-no-files-found: error
+          retention-days: 7

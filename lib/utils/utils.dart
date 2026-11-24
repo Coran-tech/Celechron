@@ -24,12 +24,14 @@ String toStringHumanReadable(DateTime dateTime) {
   return str;
 }
 
-const secureStorageIOSOptions = kDebugMode
-    ? IOSOptions(
-        accessibility: KeychainAccessibility.first_unlock,
-        accountName: 'Celechron',
-        groupId: 'group.top.celechron.celechron.debug')
-    : IOSOptions(
-        accessibility: KeychainAccessibility.first_unlock,
-        accountName: 'Celechron',
-        groupId: 'group.top.celechron.celechron');
+// A personal signing profile cannot access the publisher's shared Keychain.
+const privateIOSKeychain = bool.fromEnvironment('CELECHRON_PRIVATE_KEYCHAIN');
+const secureStorageIOSOptions = IOSOptions(
+  accessibility: KeychainAccessibility.first_unlock,
+  accountName: 'Celechron',
+  groupId: privateIOSKeychain
+      ? null
+      : (kDebugMode
+          ? 'group.top.celechron.celechron.debug'
+          : 'group.top.celechron.celechron'),
+);

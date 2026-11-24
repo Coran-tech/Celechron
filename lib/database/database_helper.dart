@@ -44,6 +44,9 @@ class DatabaseHelper {
     fuseBox = await Hive.openBox(dbFuse);
     customGpaBox = await Hive.openBox(dbCustomGpa);
     secureStorage = const FlutterSecureStorage();
+    // The private build already uses the ungrouped items. Do not move or
+    // delete them on every launch.
+    if (privateIOSKeychain) return;
     // Migrate all items without groupID
     var secureStorageItems = await secureStorage.readAll(
         iOptions: const IOSOptions(

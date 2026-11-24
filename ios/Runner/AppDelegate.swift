@@ -7,13 +7,12 @@ import flutter_local_notifications
 extension FlutterError: Error {}
 private class FlowMessengerImplementation: FlowMessenger {
     func transfer(data: FlowMessage, completion: @escaping (Result<Bool, Error>) -> Void) {
-#if DEBUG
-        let userDefaults = UserDefaults(suiteName: "group.top.celechron.celechron.debug")
-#else
-        let userDefaults = UserDefaults(suiteName: "group.top.celechron.celechron")
-#endif
+        guard let userDefaults = WatchConnectivityBridge.sharedDefaults else {
+            completion(.success(false))
+            return
+        }
         let encoded = try? JSONEncoder().encode(data.flowListDto)
-        userDefaults?.set(encoded, forKey: "flowList")
+        userDefaults.set(encoded, forKey: "flowList")
         if let encoded {
             WatchConnectivityBridge.shared.syncFlowList(encoded)
         }
@@ -76,6 +75,10 @@ private class FlowMessengerImplementation: FlowMessenger {
           (call: FlutterMethodCall, result: @escaping FlutterResult) -> Void in
             guard call.method == "update" || call.method == "logout" else {
                 result(FlutterMethodNotImplemented)
+                return
+            }
+            guard WatchConnectivityBridge.sharedDefaults != nil else {
+                result(nil)
                 return
             }
             if call.method == "logout" {

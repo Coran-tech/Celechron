@@ -26,8 +26,9 @@ jobs:
         run: |
           flutter pub get
           flutter test --no-pub test/calendar_config_parser_test.dart
+          flutter test --no-pub --dart-define=CELECHRON_PRIVATE_KEYCHAIN=true test/sideload_keychain_test.dart
       - name: Build device archive without signing
-        run: flutter build ipa --release --no-pub --no-codesign
+        run: flutter build ipa --release --no-pub --no-codesign --dart-define=CELECHRON_PRIVATE_KEYCHAIN=true
       - name: Package iPhone app with widgets and companion watch app
         shell: bash
         run: |
@@ -56,11 +57,11 @@ jobs:
           done < <(find "$app" -type f -print0)
           find "$app" -type d -name _CodeSignature -prune -exec rm -r {} +
           find "$app" -type f -name embedded.mobileprovision -delete
-          ditto -c -k --norsrc --keepParent Payload "$GITHUB_WORKSPACE/Celechron-unsigned.ipa"
-          unzip -tq "$GITHUB_WORKSPACE/Celechron-unsigned.ipa"
+          ditto -c -k --norsrc --keepParent Payload "$GITHUB_WORKSPACE/Celechron-Sideloadly-1.3.1.ipa"
+          unzip -tq "$GITHUB_WORKSPACE/Celechron-Sideloadly-1.3.1.ipa"
       - uses: actions/upload-artifact@v4
         with:
-          name: Celechron-unsigned
-          path: Celechron-unsigned.ipa
+          name: Celechron-Sideloadly
+          path: Celechron-Sideloadly-1.3.1.ipa
           if-no-files-found: error
           retention-days: 7

@@ -12,6 +12,16 @@ import WatchConnectivity
 final class WatchConnectivityBridge: NSObject, WCSessionDelegate {
     static let shared = WatchConnectivityBridge()
 
+    static let sharedDefaults: UserDefaults? = {
+        #if DEBUG
+        let group = "group.top.celechron.celechron.debug"
+        #else
+        let group = "group.top.celechron.celechron"
+        #endif
+        guard FileManager.default.containerURL(forSecurityApplicationGroupIdentifier: group) != nil else { return nil }
+        return UserDefaults(suiteName: group)
+    }()
+
     private let testAccount = "3200000000"
     private let ecardService = ECardService()
     private let revisionLock = NSLock()
@@ -26,7 +36,7 @@ final class WatchConnectivityBridge: NSObject, WCSessionDelegate {
     }
 
     func activate() {
-        guard WCSession.isSupported() else { return }
+        guard Self.sharedDefaults != nil, WCSession.isSupported() else { return }
         let session = WCSession.default
         session.delegate = self
         session.activate()
@@ -34,28 +44,23 @@ final class WatchConnectivityBridge: NSObject, WCSessionDelegate {
 
     /// 从 App Group 读取已有缓存并推送到手表
     func syncFromAppGroup() {
-        #if DEBUG
-        let suiteName = "group.top.celechron.celechron.debug"
-        #else
-        let suiteName = "group.top.celechron.celechron"
-        #endif
-        let defaults = UserDefaults(suiteName: suiteName)
+        guard let defaults = Self.sharedDefaults else { return }
         var payload: [String: Any] = [:]
-        if let flowData = defaults?.data(forKey: "flowList") {
+        if let flowData = defaults.data(forKey: "flowList") {
             payload["flowList"] = flowData
             payload["flowListBase64"] = flowData.base64EncodedString()
         }
-        if defaults?.object(forKey: "ecardBalance") != nil {
-            payload["ecardBalance"] = defaults?.integer(forKey: "ecardBalance") ?? -1
+        if defaults.object(forKey: "ecardBalance") != nil {
+            payload["ecardBalance"] = defaults.integer(forKey: "ecardBalance")
         }
-        if let updated = defaults?.object(forKey: "ecardUpdateTime") as? Date {
+        if let updated = defaults.object(forKey: "ecardUpdateTime") as? Date {
             payload["ecardUpdateTime"] = updated.timeIntervalSince1970
         }
         // 登录态（不含 token）：手表用此分流真码 / 演示码
         let auth = readSynjonesAuth()
         let loggedIn = auth != nil && auth != testAccount
         payload["ecardLoggedIn"] = loggedIn
-        defaults?.set(loggedIn, forKey: "ecardLoggedIn")
+        defaults.set(loggedIn, forKey: "ecardLoggedIn")
 
         guard !payload.isEmpty else { return }
         push(payload: payload)

@@ -20,27 +20,40 @@ import 'package:celechron/services/refresh_coordinator.dart';
 import 'package:celechron/worker/ecard_widget_messenger.dart';
 import 'package:celechron/database/database_helper.dart';
 import 'package:celechron/utils/global.dart';
+import 'package:celechron/utils/utils.dart' show privateIOSKeychain;
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
   ECardWidgetMessenger.installNativeHandler();
 
-  // 尽可能早地声明前台活跃，Workmanager isolate 会据此安全让行。
-  await RefreshCoordinator.setForegroundActive(true);
-
-  // 初始化数据库
-  await Hive.initFlutter();
-  var db = Get.put(DatabaseHelper(), tag: 'db');
-  await db.init();
-
-  // 注入数据观察项（相当于事件总线，更新这些变量将导致Widget重绘
-  Get.put((await db.getScholar()).obs, tag: 'scholar');
-  Get.put(db.getTaskList().obs, tag: 'taskList');
-  Get.put(db.getTaskListUpdateTime().obs, tag: 'taskListLastUpdate');
-  Get.put(db.getFlowList().obs, tag: 'flowList');
-  Get.put(db.getFlowListUpdateTime().obs, tag: 'flowListLastUpdate');
-  Get.put(db.getOption(), tag: 'option');
-  Get.put(db.getFuse().obs, tag: 'fuse');
+  var stage = '前台状态';
+  try {
+    await RefreshCoordinator.setForegroundActive(true);
+    stage = '本地数据目录';
+    await Hive.initFlutter();
+    stage = '本地数据库';
+    var db = Get.put(DatabaseHelper(), tag: 'db');
+    await db.init();
+    stage = '读取钥匙串';
+    Get.put((await db.getScholar()).obs, tag: 'scholar');
+    stage = '恢复日程和设置';
+    Get.put(db.getTaskList().obs, tag: 'taskList');
+    Get.put(db.getTaskListUpdateTime().obs, tag: 'taskListLastUpdate');
+    Get.put(db.getFlowList().obs, tag: 'flowList');
+    Get.put(db.getFlowListUpdateTime().obs, tag: 'flowListLastUpdate');
+    Get.put(db.getOption(), tag: 'option');
+    Get.put(db.getFuse().obs, tag: 'fuse');
+  } catch (error) {
+    if (!privateIOSKeychain) rethrow;
+    final code = error is PlatformException ? error.code : error.runtimeType;
+    runApp(CupertinoApp(
+      home: CupertinoPageScaffold(
+        child: Center(child: Text('Celechron 未能启动\n$stage：$code',
+            textAlign: TextAlign.center)),
+      ),
+    ));
+    return;
+  }
 
   runApp(const CelechronApp());
 

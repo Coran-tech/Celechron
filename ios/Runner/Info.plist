@@ -11,7 +11,7 @@
 	<key>CFBundleDevelopmentRegion</key>
 	<string>$(DEVELOPMENT_LANGUAGE)</string>
 	<key>CFBundleDisplayName</key>
-	<string>Celechron</string>
+	<string>Celechron+</string>
 	<key>CFBundleExecutable</key>
 	<string>$(EXECUTABLE_NAME)</string>
 	<key>CFBundleIdentifier</key>
@@ -19,7 +19,7 @@
 	<key>CFBundleInfoDictionaryVersion</key>
 	<string>6.0</string>
 	<key>CFBundleName</key>
-	<string>celechron</string>
+	<string>Celechron+</string>
 	<key>CFBundlePackageType</key>
 	<string>APPL</string>
 	<key>CFBundleShortVersionString</key>
@@ -46,11 +46,11 @@
 	<key>LSRequiresIPhoneOS</key>
 	<true/>
 	<key>NSCalendarsFullAccessUsageDescription</key>
-	<string>Celechron需要完整访问您的日历来同步课程表信息</string>
+	<string>Celechron+ 需要完整访问您的日历来同步课程表信息</string>
 	<key>NSCalendarsUsageDescription</key>
-	<string>Celechron需要访问您的日历来同步课程表信息</string>
+	<string>Celechron+ 需要访问您的日历来同步课程表信息</string>
 	<key>NSContactsUsageDescription</key>
-	<string>Celechron需要访问通讯录来设置事件参与者</string>
+	<string>Celechron+ 需要访问通讯录来设置事件参与者</string>
 	<key>UIApplicationSupportsIndirectInputEvents</key>
 	<true/>
 	<key>UIBackgroundModes</key>

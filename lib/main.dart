@@ -11,6 +11,7 @@ import 'package:get/get.dart';
 import 'package:hive_flutter/hive_flutter.dart';
 import 'package:app_links/app_links.dart';
 
+import 'package:celechron/design/branding.dart';
 import 'package:celechron/model/scholar.dart';
 import 'package:celechron/model/option.dart';
 import 'package:celechron/page/home_page.dart';
@@ -48,7 +49,7 @@ void main() async {
     final code = error is PlatformException ? error.code : error.runtimeType;
     runApp(CupertinoApp(
       home: CupertinoPageScaffold(
-        child: Center(child: Text('Celechron 未能启动\n$stage：$code',
+        child: Center(child: Text('$appDisplayName 未能启动\n$stage：$code',
             textAlign: TextAlign.center)),
       ),
     ));
@@ -181,8 +182,8 @@ class _CelechronAppState extends State<CelechronApp>
             data: MediaQuery.of(context).copyWith(alwaysUse24HourFormat: true),
             child: child!,
           ),
-          title: 'Celechron',
-          home: const HomePage(title: 'Celechron'),
+          title: appDisplayName,
+          home: const HomePage(title: appDisplayName),
           initialRoute: '/',
           routes: {
             '/ecardpaypage': (context) => ECardPayPage(),

@@ -68,7 +68,7 @@ struct WatchHomeView: View {
                 // 与系统时间同行：约 26pt，避免过小模糊或过大挤占
                 AppLogoView()
                     .frame(width: 26, height: 26)
-                    .accessibilityLabel("Celechron")
+                    .accessibilityLabel("Celechron+")
             }
         }
     }

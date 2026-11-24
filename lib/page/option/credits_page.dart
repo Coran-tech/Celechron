@@ -1,5 +1,6 @@
 import 'dart:io';
 import 'package:flutter/cupertino.dart';
+import 'package:celechron/design/branding.dart';
 import 'package:celechron/design/persistent_headers.dart';
 import 'package:celechron/http/github_service.dart';
 
@@ -137,7 +138,7 @@ class _CreditsPageState extends State<CreditsPage> {
                       Column(
                         children: [
                           const Text(
-                            'Celechron',
+                            appDisplayName,
                             textAlign: TextAlign.center,
                             style: TextStyle(
                               fontSize: 32,

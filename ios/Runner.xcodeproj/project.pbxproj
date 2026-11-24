@@ -1116,7 +1116,7 @@
 				DEVELOPMENT_TEAM = LAWWU6DFXL;
 				GENERATE_INFOPLIST_FILE = YES;
 				INFOPLIST_FILE = WatchWidgetExtensions/Info.plist;
-				INFOPLIST_KEY_CFBundleDisplayName = Celechron;
+				INFOPLIST_KEY_CFBundleDisplayName = "Celechron+";
 				LD_RUNPATH_SEARCH_PATHS = (
 					"$(inherited)",
 					"@executable_path/Frameworks",
@@ -1149,7 +1149,7 @@
 				DEVELOPMENT_TEAM = LAWWU6DFXL;
 				GENERATE_INFOPLIST_FILE = YES;
 				INFOPLIST_FILE = WatchWidgetExtensions/Info.plist;
-				INFOPLIST_KEY_CFBundleDisplayName = Celechron;
+				INFOPLIST_KEY_CFBundleDisplayName = "Celechron+";
 				LD_RUNPATH_SEARCH_PATHS = (
 					"$(inherited)",
 					"@executable_path/Frameworks",
@@ -1180,7 +1180,7 @@
 				DEVELOPMENT_TEAM = LAWWU6DFXL;
 				GENERATE_INFOPLIST_FILE = YES;
 				INFOPLIST_FILE = WatchWidgetExtensions/Info.plist;
-				INFOPLIST_KEY_CFBundleDisplayName = Celechron;
+				INFOPLIST_KEY_CFBundleDisplayName = "Celechron+";
 				LD_RUNPATH_SEARCH_PATHS = (
 					"$(inherited)",
 					"@executable_path/Frameworks",

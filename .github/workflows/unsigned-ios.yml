@@ -37,18 +37,25 @@ jobs:
           app=Payload/Runner.app
           ditto "$GITHUB_WORKSPACE/build/ios/archive/Runner.xcarchive/Products/Applications/Runner.app" "$app"
           watch="$app/Watch/CelechronWatch.app"
+          find "$app" \( -name '*.app' -o -name '*.appex' -o -name '_CodeSignature' \) -print
           for bundle in "$app" "$app/PlugIns/WidgetExtensions.appex" "$watch" "$watch/PlugIns/WatchWidgetExtensions.appex"; do
             exe=$(/usr/libexec/PlistBuddy -c 'Print :CFBundleExecutable' "$bundle/Info.plist")
-            test -x "$bundle/$exe"
+            test -x "$bundle/$exe" || { echo "::error::Missing executable: $bundle/$exe"; exit 1; }
           done
-          # Vendored frameworks can carry signatures even with Xcode signing off.
-          while IFS= read -r -d '' bundle; do
-            if codesign -d "$bundle" 2>/dev/null; then
-              codesign --remove-signature "$bundle"
+          # Check Mach-O files directly: copied resource seals alone do not
+          # indicate that the corresponding executable is signed.
+          while IFS= read -r -d '' binary; do
+            case "$(file -b "$binary")" in *Mach-O*) ;; *) continue ;; esac
+            if codesign -d "$binary" 2>/dev/null; then
+              echo "Removing embedded signature: $binary"
+              codesign --remove-signature "$binary"
             fi
-          done < <(find "$app" -depth \( -name '*.dylib' -o -name '*.framework' -o -name '*.appex' -o -name '*.app' \) -print0)
-          test -z "$(find Payload \( -name embedded.mobileprovision -o -name _CodeSignature \) -print)"
-          if codesign -d "$app" 2>/dev/null; then exit 1; fi
+            if codesign -d "$binary" 2>/dev/null; then
+              echo "::error::Signature remains: $binary"; exit 1
+            fi
+          done < <(find "$app" -type f -print0)
+          find "$app" -type d -name _CodeSignature -prune -exec rm -r {} +
+          find "$app" -type f -name embedded.mobileprovision -delete
           ditto -c -k --norsrc --keepParent Payload "$GITHUB_WORKSPACE/Celechron-unsigned.ipa"
           unzip -tq "$GITHUB_WORKSPACE/Celechron-unsigned.ipa"
       - uses: actions/upload-artifact@v4

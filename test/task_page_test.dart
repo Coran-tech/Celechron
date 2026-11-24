@@ -241,4 +241,48 @@ void main() {
       expect(popped?.status, TaskStatus.deleted);
     });
   });
+  testWidgets('固定日程独立编辑起止时间，保存时校验', (tester) async {
+    final start = DateTime(2026, 3, 10, 9);
+    final end = DateTime(2026, 3, 10, 11);
+    final task = Task(
+        type: TaskType.fixed,
+        startTime: start,
+        endTime: end,
+        repeatEndsTime: end);
+    Task? saved;
+    await tester.pumpWidget(CupertinoApp(
+        home: Builder(
+            builder: (context) => CupertinoButton(
+                onPressed: () async {
+                  saved = await Navigator.of(context).push<Task>(
+                      CupertinoPageRoute(builder: (_) => TaskEditPage(task)));
+                },
+                child: const Text('打开')))));
+    await tester.tap(find.text('打开'));
+    await tester.pumpAndSettle();
+    Future<void> edit(String label, DateTime original, DateTime next) async {
+      await tester.tap(find.textContaining(label));
+      await tester.pumpAndSettle();
+      final picker =
+          tester.widget<CupertinoDatePicker>(find.byType(CupertinoDatePicker));
+      expect(picker.initialDateTime, original);
+      picker.onDateTimeChanged(next);
+      Navigator.of(tester.element(find.byType(CupertinoDatePicker))).pop();
+      await tester.pumpAndSettle();
+    }
+
+    final later = end.add(const Duration(hours: 2));
+    await edit('开始于', start, later);
+    await tester.tap(find.byIcon(CupertinoIcons.check_mark));
+    await tester.pumpAndSettle();
+    expect(find.text('结束时间必须晚于开始时间'), findsOneWidget);
+    await tester.tap(find.text('确定'));
+    await tester.pumpAndSettle();
+    final fixedEnd = later.add(const Duration(minutes: 30));
+    await edit('结束于', end, fixedEnd);
+    await tester.tap(find.byIcon(CupertinoIcons.check_mark));
+    await tester.pumpAndSettle();
+    expect(saved?.startTime, later);
+    expect(saved?.endTime, fixedEnd);
+  });
 }

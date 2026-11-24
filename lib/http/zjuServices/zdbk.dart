@@ -6,7 +6,7 @@ import 'package:flutter/foundation.dart';
 
 import 'package:celechron/database/database_helper.dart';
 import 'package:celechron/http/calendar_config_parser.dart'
-    show isFutureSemester;
+    show academicYearStartFor, isFutureSemester;
 import 'package:celechron/utils/gpa_helper.dart';
 import 'package:celechron/model/grade.dart';
 import 'package:celechron/model/session.dart';
@@ -26,8 +26,7 @@ class Zdbk {
   DatabaseHelper? _db;
   Future<bool>? _loginFuture;
   int _sessionGeneration = 0;
-  bool _siteBusy = false;
-  final List<Completer<void>> _siteWaiters = [];
+  Future<void> _siteQueue = Future.value();
   DateTime? _lastSiteRequestAt;
   bool _throttledDuringAction = false;
 
@@ -158,7 +157,7 @@ class Zdbk {
       bool retried = false}) {
     // 教务网用 9xx 非标准状态码表示限频（921 "请求过于频繁"、922 并发被拒等），
     // 由 _withSitePermit 统一退避重试
-    if (response.statusCode >= 900 && response.statusCode <= 999) {
+    if (response.statusCode == 921 || response.statusCode == 922) {
       _throttledDuringAction = true;
     }
     try {
@@ -234,12 +233,10 @@ class Zdbk {
   /// 必然触发教务网限频（921）或首批并发被拒（922），随后整块落缓存。
   /// 被限频时在持有队列的情况下退避重试，退避期间不会有别的请求插队。
   Future<T> _withSitePermit<T>(Future<T> Function() action) async {
-    while (_siteBusy) {
-      final waiter = Completer<void>();
-      _siteWaiters.add(waiter);
-      await waiter.future;
-    }
-    _siteBusy = true;
+    final previous = _siteQueue;
+    final done = Completer<void>();
+    _siteQueue = done.future;
+    await previous;
     try {
       for (var attempt = 0;; attempt++) {
         final last = _lastSiteRequestAt;
@@ -270,10 +267,7 @@ class Zdbk {
         _lastSiteRequestAt = null;
       }
     } finally {
-      _siteBusy = false;
-      if (_siteWaiters.isNotEmpty) {
-        _siteWaiters.removeAt(0).complete();
-      }
+      done.complete();
     }
   }
 
@@ -540,7 +534,7 @@ class Zdbk {
     final endYear = int.tryParse(year.length >= 9 ? year.substring(5, 9) : '');
     final at = cachedAt == null ? null : DateTime.tryParse(cachedAt);
     if (endYear == null || at == null) return false;
-    return at.isAfter(DateTime.utc(endYear, DateTime.august, 1));
+    return academicYearStartFor(at.toLocal()) >= endYear;
   }
 
   /// [preferCache] 用于已结束的学年：其课表不会再变，有学年结束后写入的
@@ -557,7 +551,8 @@ class Zdbk {
       final cached = _cachedList(cacheKey, '教务网课表缓存（学年 $year，学期 $semester）');
       if (cached.data.isNotEmpty &&
           _cachedAfterAcademicYear(cached.cachedAt, year)) {
-        return Tuple(null, _parseSessions(cached.data, '教务网课表缓存'));
+        final sessions = _parseSessions(cached.data, '教务网课表缓存');
+        if (sessions.isNotEmpty) return Tuple(null, sessions);
       }
     }
     // 未开学的学期当天已确认为空就不再重复请求；当前学期不受此限，
@@ -570,7 +565,8 @@ class Zdbk {
         operation: 'skipKnownEmpty',
         message: '$year $semester 尚未开学且今天已确认为空，本次跳过',
       );
-      return Tuple(null, <Session>[]);
+      final cached = _cachedList(cacheKey, '教务网课表缓存（$year $semester）');
+      return Tuple(null, _parseSessions(cached.data, '教务网课表缓存'));
     }
 
     return await _withAutoRelogin(httpClient, (relogged, retried) async {

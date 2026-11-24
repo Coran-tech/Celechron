@@ -22,7 +22,7 @@ class _TaskEditPageState extends State<TaskEditPage> {
         builder: (BuildContext context) {
           return CupertinoAlertDialog(
             title: const Text(
-              '开始时间必须晚于结束时间',
+              '结束时间必须晚于开始时间',
             ),
             actions: [
               CupertinoDialogAction(
@@ -224,11 +224,6 @@ class _TaskEditPageState extends State<TaskEditPage> {
                                   ),
                                 );
                               });
-                          if (now.endTime.isBefore(now.startTime)) {
-                            setState(() {
-                              now.endTime = now.startTime;
-                            });
-                          }
                         },
                       ),
                     CupertinoTextFormFieldRow(
@@ -263,12 +258,6 @@ class _TaskEditPageState extends State<TaskEditPage> {
                                 ),
                               );
                             });
-                        if (now.type == TaskType.fixed &&
-                            now.startTime.isAfter(now.endTime)) {
-                          setState(() {
-                            now.startTime = now.endTime;
-                          });
-                        }
                       },
                     ),
                   ],

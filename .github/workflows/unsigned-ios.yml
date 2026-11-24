@@ -1,7 +1,7 @@
 name: Build unsigned Celechron IPA
 on:
   push:
-    branches: [build/unsigned-ios-724e54a]
+    branches: [build/unsigned-ios-724e54a, integration/upstream-fixes-20261124]
   workflow_dispatch:
 
 permissions:
@@ -22,10 +22,10 @@ jobs:
         with:
           flutter-version: '3.44.1'
           cache: true
-      - name: Get dependencies and test calendar handling
+      - name: Get dependencies and run regression tests
         run: |
           flutter pub get
-          flutter test --no-pub test/calendar_config_parser_test.dart
+          flutter test --no-pub
           flutter test --no-pub --dart-define=CELECHRON_PRIVATE_KEYCHAIN=true test/sideload_keychain_test.dart
       - name: Build device archive without signing
         run: flutter build ipa --release --no-pub --no-codesign --dart-define=CELECHRON_PRIVATE_KEYCHAIN=true

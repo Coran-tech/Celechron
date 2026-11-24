@@ -95,19 +95,14 @@ class Scholar {
   }
 
   Semester get thisSemester {
+    if (semesters.isEmpty) return Semester('未刷新');
     if (semesters.length > 1) {
-      if (semesters[1]
-          .periods
-          .last
-          .endTime
-          .isAfter(DateTime.now().subtract(const Duration(days: 14)))) {
+      final cutoff = DateTime.now().subtract(const Duration(days: 14));
+      if (semesters[1].periods.any((period) => period.endTime.isAfter(cutoff))) {
         return semesters[1];
-      } else {
-        return semesters[0];
       }
-    } else {
-      return semesters.isEmpty ? Semester('未刷新') : semesters.first;
     }
+    return semesters.first;
   }
 
   bool get isNearExamWeek {

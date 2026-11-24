@@ -571,8 +571,7 @@ class UgrsSpider implements Spider {
       }
 
       for (var season in ['1|秋', '1|冬', '2|春', '2|夏']) {
-        // 探测学年只为判断下一学年是否开放，查第一个学期就够了
-        if (isProbeYear && season != '1|秋') continue;
+        // 各季度独立发布；当天已确认为空的季度由 getTimetable 跳过。
         if (timetableFetches.isEmpty) {
           timetableFetches.add(handleTimetable(season));
         } else {

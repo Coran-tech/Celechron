@@ -12,30 +12,38 @@ class GradeDetailController extends GetxController {
   final customGpaMode = false.obs;
   final _db = Get.find<DatabaseHelper>(tag: 'db');
   final RxMap<String, bool> customGpaSelected = RxMap();
-  late RxList<Semester> semestersWithGrades;
-
-  void init() {
-    semestersWithGrades = scholar.value.semesters
-        .where((element) => element.grades.isNotEmpty)
-        .toList()
-        .obs;
-    ever(scholar, (callback) => refreshSemesters());
-    customGpaSelected.value = _db.getCustomGpa();
-    semesterIndex.value = 0;
-    customGpaMode.value = false;
-  }
+  final semestersWithGrades = <Semester>[].obs;
+  late final Worker _semesterWorker;
 
   @override
   void onInit() {
-    init();
     super.onInit();
+    refreshSemesters();
+    _semesterWorker = ever(scholar, (_) => refreshSemesters());
+    customGpaSelected.value = _db.getCustomGpa();
+  }
+
+  @override
+  void onClose() {
+    _semesterWorker.dispose();
+    super.onClose();
   }
 
   void refreshSemesters() {
-    semestersWithGrades.value = scholar.value.semesters
-        .where((element) => element.grades.isNotEmpty)
-        .toList();
-    semestersWithGrades.refresh();
+    final previous =
+        semestersWithGrades.elementAtOrNull(semesterIndex.value)?.name;
+    final updated =
+        scholar.value.semesters.where((s) => s.grades.isNotEmpty).toList();
+    final index = updated.indexWhere((s) => s.name == previous);
+    semesterIndex.value = index < 0 ? 0 : index;
+    semestersWithGrades.assignAll(updated);
+  }
+
+  Tuple<List<double>, double> getYearStats(int index) {
+    final year = semestersWithGrades[index].name.substring(0, 9);
+    return GpaHelper.calculateGpa(semestersWithGrades
+        .where((s) => s.name.startsWith(year))
+        .expand((s) => s.grades));
   }
 
   void refreshCustomGpa() {

@@ -207,87 +207,44 @@ class GradeDetailPage extends StatelessWidget {
   }
 
   Widget _buildHistory(BuildContext context) {
-    return Column(
-      children: [
-        Row(
-          children: [
-            Expanded(
-              child: RoundRectangleCard(
-                animate: false,
-                child: Column(
-                  children: [
-                    // Horizontal scrollable list to list all semesters
-                    SizedBox(
-                      height: 81,
-                      child: Obx(
-                        () => ListView.builder(
-                          scrollDirection: Axis.horizontal,
-                          itemCount:
-                              _gradeDetailController.semestersWithGrades.length,
-                          itemBuilder: (context, index) {
-                            final semester = _gradeDetailController
-                                .semestersWithGrades[index];
-
-                            return Obx(
-                              () => Row(
-                                children: [
-                                  Obx(
-                                    () => TwoLineCard(
-                                      animate: true,
-                                      withColoredFont: true,
-                                      width: 120,
-                                      title:
-                                          '${semester.name.substring(2, 5)}${semester.name.substring(7, 11)}',
-                                      content: _gradeDetailController
-                                              .customGpaMode.value
-                                          ? '${getSelectedGradeCount(semester)} / ${semester.grades.length}'
-                                          : '${semester.gpa[0].toStringAsFixed(2)}/${semester.credits.toStringAsFixed(1)}',
-                                      onTap: () {
-                                        _gradeDetailController
-                                            .semesterIndex.value = index;
-                                        _gradeDetailController.semesterIndex
-                                            .refresh();
-                                      },
-                                      onLongPress: _gradeDetailController
-                                              .customGpaMode.value
-                                          ? () {
-                                              _gradeDetailController
-                                                  .semesterIndex.value = index;
-                                              _gradeDetailController
-                                                  .semesterIndex
-                                                  .refresh();
-                                              _gradeDetailController
-                                                  .toggleSemesterSelection(
-                                                      index);
-                                            }
-                                          : null,
-                                      backgroundColor: _gradeDetailController
-                                                  .semesterIndex.value ==
-                                              index
-                                          ? CustomCupertinoDynamicColors.cyan
-                                          : CupertinoColors.systemFill,
-                                    ),
-                                  ),
-                                  if (index !=
-                                      _gradeDetailController
-                                              .semestersWithGrades.length -
-                                          1)
-                                    const SizedBox(width: 6),
-                                ],
-                              ),
-                            );
-                          },
-                        ),
-                      ),
-                    ),
-                  ],
+    final controller = _gradeDetailController;
+    final semesters = controller.semestersWithGrades;
+    final custom = controller.customGpaMode.value;
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 20),
+      child: RoundRectangleCard(
+        animate: false,
+        child: SingleChildScrollView(
+          scrollDirection: Axis.horizontal,
+          child: Row(
+            children: [
+              for (final (index, semester) in semesters.indexed) ...[
+                if (index > 0) const SizedBox(width: 6),
+                TwoLineCard(
+                  animate: true,
+                  withColoredFont: true,
+                  width: 120,
+                  title:
+                      '${semester.name.substring(2, 5)}${semester.name.substring(7, 11)}',
+                  content: custom
+                      ? '${getSelectedGradeCount(semester)} / ${semester.grades.length}'
+                      : '${semester.gpa[0].toStringAsFixed(2)}/${semester.credits.toStringAsFixed(1)}',
+                  onTap: () => controller.semesterIndex.value = index,
+                  onLongPress: custom
+                      ? () {
+                          controller.semesterIndex.value = index;
+                          controller.toggleSemesterSelection(index);
+                        }
+                      : null,
+                  backgroundColor: controller.semesterIndex.value == index
+                      ? CustomCupertinoDynamicColors.cyan
+                      : CupertinoColors.systemFill,
                 ),
-              ),
-            ),
-          ],
+              ],
+            ],
+          ),
         ),
-        const SizedBox(height: 20),
-      ],
+      ),
     );
   }
 

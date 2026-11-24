@@ -53,7 +53,9 @@ void main() {
     await tester.tap(find.bySemanticsLabel('Custom GPA'));
     await tester.pumpAndSettle();
     expect(find.text('已选百分制'), findsOneWidget);
-    ctrl.semesterIndex.value = 2;
+    await tester.tap(find.text('24-25秋冬'));
+    await tester.pumpAndSettle();
+    expect(ctrl.semesterIndex.value, 2);
     await tester.pumpAndSettle();
     scholar.value.semesters = [spring];
     scholar.refresh();

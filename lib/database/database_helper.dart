@@ -15,6 +15,8 @@ import 'adapters/period_adapter.dart';
 import 'adapters/fuse_adapter.dart';
 import 'adapters/course_id_map_adapter.dart';
 
+import 'course_color_preferences.dart';
+
 class DatabaseHelper {
   late final Box optionsBox;
   late final Box scholarBox;
@@ -62,6 +64,9 @@ class DatabaseHelper {
           key: e.key, value: e.value, iOptions: secureStorageIOSOptions);
     });
   }
+
+  CourseColorPreferences timetableColors(String semester) =>
+      CourseColorPreferences(optionsBox, semester);
 
   // Options
   final String dbOptions = 'dbOptions';

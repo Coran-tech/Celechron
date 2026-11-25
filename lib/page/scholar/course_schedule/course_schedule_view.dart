@@ -1,3 +1,4 @@
+import 'package:celechron/database/database_helper.dart';
 import 'package:celechron/design/custom_colors.dart';
 import '../course_detail/course_detail_view.dart';
 import 'package:celechron/model/session.dart';
@@ -169,20 +170,29 @@ class CourseSchedulePage extends StatelessWidget {
     if (!context.mounted || course == null) return;
     await Navigator.of(context).push(CupertinoPageRoute(
       title: course.name,
-      builder: (_) => CourseDetailPage.forCourse(course),
+      builder: (_) => CourseDetailPage.forCourse(course,
+          semester: _courseScheduleController.semester, scheduleKey: block.key),
     ));
   }
 
   Widget _courseSchedule(BuildContext context) => RoundRectangleCard(
         animate: false,
-        child: Obx(() => TimetableGrid(
-              days: _courseScheduleController.sessionsByDayOfWeek,
-              colorIndices: courseColorIndices(
-                  _courseScheduleController.semester.sessions),
-              hideInformation:
-                  _courseScheduleController.hideCourseInfomation.value,
-              onOpen: (block) => _openBlock(context, block),
-            )),
+        child: Obx(() {
+          final semester = _courseScheduleController.semester;
+          final days = _courseScheduleController.sessionsByDayOfWeek;
+          final indices = courseColorIndices(semester.sessions);
+          final hide = _courseScheduleController.hideCourseInfomation.value;
+          final prefs = Get.find<DatabaseHelper>(tag: 'db')
+              .timetableColors(semester.name);
+          return ValueListenableBuilder(
+              valueListenable: prefs.changes,
+              builder: (_, __, ___) => TimetableGrid(
+                  days: days,
+                  colorIndices: indices,
+                  overrides: prefs.overrides,
+                  hideInformation: hide,
+                  onOpen: (block) => _openBlock(context, block)));
+        }),
       );
 
   @override

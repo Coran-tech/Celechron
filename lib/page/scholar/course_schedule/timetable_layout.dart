@@ -13,11 +13,11 @@ enum CourseWeeks {
 }
 
 // 教务网有时混用全角、半角括号；未知课程不要仅因为同名占位符而合并。
-String courseKey(Session s) {
-  final name = s.name.trim().replaceAll('(', '（').replaceAll(')', '）');
-  return (name.isEmpty || name == '未知课程') && s.id != null
-      ? '$name:${s.id}'
-      : name;
+String courseKey(Session s) => timetableCourseKey(s.name, s.id);
+
+String timetableCourseKey(String courseName, String? id) {
+  final name = courseName.trim().replaceAll('(', '（').replaceAll(')', '）');
+  return (name.isEmpty || name == '未知课程') && id != null ? '$name:$id' : name;
 }
 
 /// Assign colors once for BOTH halves rather than cycling colors per day.

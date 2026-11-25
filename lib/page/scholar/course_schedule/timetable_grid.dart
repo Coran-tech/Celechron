@@ -2,17 +2,20 @@ import 'package:celechron/model/session.dart';
 import 'package:flutter/cupertino.dart';
 
 import 'timetable_card.dart';
+import 'course_palette.dart';
 import 'timetable_layout.dart';
 
 class TimetableGrid extends StatelessWidget {
   final List<List<Session>> days;
   final Map<String, int> colorIndices;
+  final Map<String, int> overrides;
   final bool hideInformation;
   final ValueChanged<TimetableBlock> onOpen;
   const TimetableGrid(
       {super.key,
       required this.days,
       required this.colorIndices,
+      this.overrides = const {},
       required this.hideInformation,
       required this.onOpen});
 
@@ -36,6 +39,7 @@ class TimetableGrid extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final fills = timetableRgb(colorIndices, overrides);
     final columns = [
       for (final sessions in days.skip(1)) layoutTimetableDay(sessions)
     ];
@@ -119,8 +123,9 @@ class TimetableGrid extends StatelessWidget {
                                   height: b.weeks.length * _rowHeight,
                                   child: TimetableCard(
                                       block: b,
-                                      colors: CourseColors.forIndex(
-                                          colorIndices[b.key]!, dark),
+                                      colors: CourseColors.fromRgb(
+                                          fills[b.key]!, dark,
+                                          custom: overrides.containsKey(b.key)),
                                       hideInformation: hideInformation,
                                       onPressed: () => onOpen(b)),
                                 ),

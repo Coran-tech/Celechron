@@ -1,21 +1,7 @@
 import 'package:flutter/cupertino.dart';
 
 import 'timetable_layout.dart';
-
-class CourseColors {
-  final Color fill, ink;
-  const CourseColors(this.fill, this.ink);
-
-  factory CourseColors.forIndex(int index, Brightness brightness) {
-    // Visit widely separated hues before introducing intermediate shades.
-    final hue = (170.0 + index * 137.507764) % 360;
-    final dark = brightness == Brightness.dark;
-    Color tone(double saturation, double lightness) =>
-        HSLColor.fromAHSL(1, hue, saturation, lightness).toColor();
-    return CourseColors(tone(dark ? .37 : .51, dark ? .235 : .854),
-        tone(dark ? .65 : .58, dark ? .90 : .18));
-  }
-}
+import 'course_palette.dart';
 
 class CourseSurface extends CustomPainter {
   final CourseColors colors;

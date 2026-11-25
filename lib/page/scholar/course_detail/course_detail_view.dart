@@ -1,3 +1,7 @@
+import 'package:celechron/database/database_helper.dart';
+import 'package:celechron/model/semester.dart';
+import '../course_schedule/timetable_layout.dart';
+import 'course_color_editor.dart';
 import 'package:celechron/page/scholar/course_list/course_brief_card.dart';
 import 'package:celechron/design/sub_title.dart';
 import 'package:celechron/design/custom_colors.dart';
@@ -14,16 +18,20 @@ import 'package:celechron/model/scholar.dart';
 
 class CourseDetailPage extends StatelessWidget {
   late final Course course;
+  late final Semester? semester;
+  final String? scheduleKey;
 
-  CourseDetailPage({required courseId, super.key}) {
-    course = Get.find<Rx<Scholar>>(tag: 'scholar')
+  CourseDetailPage({required courseId, super.key}) : scheduleKey = null {
+    final owner = Get.find<Rx<Scholar>>(tag: 'scholar')
         .value
         .semesters
-        .firstWhere((e) => e.courses.containsKey(courseId))
-        .courses[courseId]!;
+        .firstWhere((s) => s.courses.containsKey(courseId));
+    semester = owner;
+    course = owner.courses[courseId]!;
   }
 
-  CourseDetailPage.forCourse(this.course, {super.key});
+  CourseDetailPage.forCourse(this.course,
+      {this.semester, this.scheduleKey, super.key});
 
   Widget createSessionCard(context, List<Session> sessions) {
     sessions.sort((a, b) => a.time.first.compareTo(b.time.first));
@@ -399,6 +407,15 @@ class CourseDetailPage extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final owner = semester;
+    final key = scheduleKey ??
+        (course.sessions.isNotEmpty
+            ? courseKey(course.sessions.first)
+            : timetableCourseKey(course.name, course.id));
+    final indices = owner == null
+        ? const <String, int>{}
+        : courseColorIndices(owner.sessions);
+    if (owner != null) indices.putIfAbsent(key, () => indices.length);
     return CupertinoPageScaffold(
       backgroundColor: CupertinoDynamicColor.resolve(
           CupertinoColors.systemGroupedBackground, context),
@@ -412,6 +429,13 @@ class CourseDetailPage extends StatelessWidget {
                 children: [
                   SubSubtitleRow(subtitle: '基本信息'),
                   CourseBriefCard(course: course),
+                  if (owner != null)
+                    CourseColorRow(
+                        preferences: Get.find<DatabaseHelper>(tag: 'db')
+                            .timetableColors(owner.name),
+                        courseKey: key,
+                        name: course.name,
+                        indices: indices),
                 ],
               ),
             ),

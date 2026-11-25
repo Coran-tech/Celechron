@@ -1,3 +1,9 @@
+import 'dart:io';
+import 'package:celechron/database/course_color_preferences.dart';
+import 'package:celechron/page/scholar/course_schedule/course_palette.dart';
+import 'package:celechron/database/database_helper.dart';
+import 'package:hive/hive.dart';
+import 'dart:typed_data';
 import 'dart:ui' as ui;
 
 import 'package:celechron/http/zjuServices/grs_new.dart';
@@ -128,6 +134,56 @@ void main() {
     expect(blocks.first.sources, hasLength(3));
   });
 
+  test('custom RGB survives a real database reopen and stays in its semester',
+      () async {
+    final dir =
+        await Directory.systemTemp.createTemp('celechron-course-colors-');
+    final id = 'coursecolors';
+    try {
+      var box = await Hive.openBox(id, path: dir.path);
+      await CourseColorPreferences(box, '秋冬').set('数学', 0x18B187);
+      await box.close();
+      box = await Hive.openBox(id, path: dir.path);
+      final prefs = CourseColorPreferences(box, '秋冬');
+      expect(prefs.overrides['数学'], 0x18B187);
+      expect(CourseColorPreferences(box, '春夏').overrides, isEmpty);
+      await prefs.set('数学', null);
+      expect(prefs.overrides, isEmpty);
+    } finally {
+      if (Hive.isBoxOpen(id)) await Hive.box(id).close();
+      await dir.delete(recursive: true);
+    }
+  });
+
+  test('first 15 use palette order; only clashing automatic assignments move',
+      () {
+    final indices = {for (var i = 0; i < 22; i++) 'c$i': i};
+    final automatic = timetableRgb(indices, {});
+    expect(automatic.values.take(15), coursePalette.map((t) => t.rgb));
+    expect(automatic.values.toSet(), hasLength(22));
+    expect(CourseColors.fromRgb(0x03A681, Brightness.dark, custom: true).fill,
+        const Color(0xFF03A681));
+    final claimed = coursePalette[1].rgb;
+    final recolored = timetableRgb(indices, {'c0': claimed});
+    expect(recolored['c0'], claimed);
+    expect(recolored['c1'], automatic['c0']);
+    expect(recolored['c2'], automatic['c2']);
+    expect(recolored.values.toSet(), hasLength(22));
+    expect(
+        timetableRgb(indices, {'c0': claimed, 'c1': claimed})['c1'], claimed);
+    for (final mode in Brightness.values) {
+      for (final rgb in [...automatic.values, 0xFFFFFF, 0x000000, 0x757575]) {
+        final colors = CourseColors.fromRgb(rgb, mode);
+        final luminances = [
+          colors.fill.computeLuminance(),
+          colors.ink.computeLuminance()
+        ]..sort();
+        expect((luminances.last + .05) / (luminances.first + .05),
+            greaterThanOrEqualTo(4.5));
+      }
+    }
+  });
+
   testWidgets(
       'keep both detail routes for a merged same-name class and switch halves',
       (tester) async {
@@ -145,6 +201,10 @@ void main() {
         'sessions': [s.toJson()]
       });
     }
+    final db = Get.put(DatabaseHelper(), tag: 'db');
+    db.optionsBox =
+        await Hive.openBox('course-schedule-test', bytes: Uint8List(0));
+    addTearDown(Hive.close);
     Get.put((Scholar()..semesters.add(sem)).obs, tag: 'scholar');
     addTearDown(Get.reset);
     await tester
@@ -163,13 +223,49 @@ void main() {
             .course
             .id,
         'B');
+    Future<void> editColor() async {
+      await tester.ensureVisible(find.text('课表颜色'));
+      await tester.tap(find.text('课表颜色'));
+      await tester.pumpAndSettle();
+    }
+
+    await editColor();
+    await tester.tap(find.byKey(ValueKey(coursePalette[1].rgb)));
+    await tester.tap(find.text('取消'));
+    await tester.pumpAndSettle();
+    expect(db.timetableColors(sem.name).overrides, isEmpty);
+    await editColor();
+    await tester.enterText(find.byType(CupertinoTextField), 'FF');
+    await tester.pump();
+    expect(
+        tester
+            .widget<CupertinoButton>(find.widgetWithText(CupertinoButton, '完成'))
+            .onPressed,
+        isNull);
+    await tester.enterText(find.byType(CupertinoTextField), '#03A681');
+    await tester.pump();
+    await tester.tap(find.text('完成'));
+    await tester.pumpAndSettle();
+    expect(db.timetableColors(sem.name).overrides[card.block.key], 0x03A681);
     Navigator.of(tester.element(find.byType(CourseDetailPage))).pop();
     await tester.pumpAndSettle();
     await tester.tap(find.text('冬学期课时'));
     await tester.pumpAndSettle();
     final other = tester.widget<TimetableCard>(find.byType(TimetableCard));
     expect((other.block.start, other.block.end), (6, 7));
-    expect(other.colors.fill, card.colors.fill);
+    expect(other.colors.fill, const Color(0xFF03A681));
+    await tester.tap(find.byType(TimetableCard));
+    await tester.pumpAndSettle();
+    await editColor();
+    await tester.tap(find.text('恢复自动配色'));
+    await tester.pump();
+    await tester.tap(find.text('完成'));
+    await tester.pumpAndSettle();
+    Navigator.of(tester.element(find.byType(CourseDetailPage))).pop();
+    await tester.pumpAndSettle();
+    expect(tester.widget<TimetableCard>(find.byType(TimetableCard)).colors.fill,
+        card.colors.fill);
+    expect(db.timetableColors(sem.name).overrides, isEmpty);
   });
 
   testWidgets('paint solid, descending and ascending lines in light and dark',

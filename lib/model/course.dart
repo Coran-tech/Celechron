@@ -1,3 +1,4 @@
+import 'package:flutter/foundation.dart' show listEquals, setEquals;
 import 'package:celechron/model/exams_dto.dart';
 import 'package:celechron/utils/json_utils.dart';
 
@@ -123,47 +124,34 @@ class Course {
     if (session.type != null && type == null) {
       type = session.type!;
     }
-    if (sessions.any((e) =>
-        e.dayOfWeek == session.dayOfWeek &&
-        e.oddWeek == session.oddWeek &&
-        e.evenWeek == session.evenWeek &&
-        e.location == session.location &&
-        e.time.contains(session.time.first))) {
-      // 观察到修改过某短学期上课周数的长学期课程出现秋+冬两个session
-      // 合并学期类型
-      var currentSession = sessions.firstWhere((e) =>
-          e.dayOfWeek == session.dayOfWeek &&
-          e.oddWeek == session.oddWeek &&
-          e.evenWeek == session.evenWeek &&
-          e.location == session.location &&
-          e.time.contains(session.time.first));
-      currentSession.firstHalf = currentSession.firstHalf || session.firstHalf;
-      currentSession.secondHalf =
-          currentSession.secondHalf || session.secondHalf;
-      return false;
-    }
-    if (sessions.any((e) =>
-        e.dayOfWeek == session.dayOfWeek &&
-        e.oddWeek == session.oddWeek &&
-        e.evenWeek == session.evenWeek &&
-        e.location == session.location &&
-        (e.time.last + 1 == session.time.first))) {
-      var incompleteSession = sessions.firstWhere((e) =>
-          e.dayOfWeek == session.dayOfWeek &&
-          e.oddWeek == session.oddWeek &&
-          e.evenWeek == session.evenWeek &&
-          e.location == session.location &&
-          (e.time.last + 1 == session.time.first));
-      incompleteSession.time.addAll(session.time);
-      return false;
-    } else {
-      //used for grs
-      if (online == true && session.location == null) {
-        session.location = "线上";
+    for (final existing in sessions) {
+      if (existing.dayOfWeek != session.dayOfWeek ||
+          existing.oddWeek != session.oddWeek ||
+          existing.evenWeek != session.evenWeek ||
+          existing.location != session.location ||
+          existing.teacher != session.teacher ||
+          existing.customRepeat != session.customRepeat ||
+          !setEquals(existing.customRepeatWeeks.toSet(),
+              session.customRepeatWeeks.toSet())) {
+        continue;
       }
-      sessions.add(session);
-      return true;
+      if (listEquals(existing.time, session.time)) {
+        existing.firstHalf |= session.firstHalf;
+        existing.secondHalf |= session.secondHalf;
+        return false;
+      }
+      if (existing.firstHalf != session.firstHalf ||
+          existing.secondHalf != session.secondHalf) continue;
+      if (session.time.every(existing.time.contains)) return false;
+      if (existing.time.last + 1 == session.time.first) {
+        existing.time.addAll(session.time);
+        return false;
+      }
     }
+    // used for grs
+    if (online == true && session.location == null) session.location = "线上";
+    sessions.add(session);
+    return true;
   }
 
   void completeGrade(Grade grade) {

@@ -13,14 +13,17 @@ import 'package:celechron/model/session.dart';
 import 'package:celechron/model/scholar.dart';
 
 class CourseDetailPage extends StatelessWidget {
-  final _scholar = Get.find<Rx<Scholar>>(tag: 'scholar');
   late final Course course;
 
   CourseDetailPage({required courseId, super.key}) {
-    course = _scholar.value.semesters
+    course = Get.find<Rx<Scholar>>(tag: 'scholar')
+        .value
+        .semesters
         .firstWhere((e) => e.courses.containsKey(courseId))
         .courses[courseId]!;
   }
+
+  CourseDetailPage.forCourse(this.course, {super.key});
 
   Widget createSessionCard(context, List<Session> sessions) {
     sessions.sort((a, b) => a.time.first.compareTo(b.time.first));

@@ -486,7 +486,7 @@ class GrsNew {
     try {
       final result = await _fetchApi(httpClient, uri, context: context);
       _requireSuccess(result, context);
-      final sessions = _parseTimetable(result, semester, context);
+      final sessions = parseTimetable(result, semester, context);
       await _fetchCourseDetails(httpClient, year, semester, sessions);
       return Tuple(null, sessions);
     } on Object catch (error, stackTrace) {
@@ -497,7 +497,8 @@ class GrsNew {
     }
   }
 
-  List<Session> _parseTimetable(
+  @visibleForTesting
+  static List<Session> parseTimetable(
       Map<String, dynamic> result, int semester, String context) {
     final resultMap = asStringMap(result["result"]);
     final dayWithClasses = asStringMap(resultMap?["kcbMap"]);
@@ -509,7 +510,7 @@ class GrsNew {
     for (var day = 1; day <= 7; day++) {
       final classesThisDay = asStringMap(dayWithClasses["$day"]);
       if (classesThisDay == null) continue;
-      final sessionsThisDay = <String, Session>{};
+      final latest = <(String, int, String, String?, String?), Session>{};
       for (var period = 1; period <= 15; period++) {
         final wrapper = asStringMap(classesThisDay["$period"]);
         final classes = asDynamicList(wrapper?["pyKcbjSjddVOList"]) ?? const [];
@@ -521,14 +522,21 @@ class GrsNew {
             if (classId == null || classId.length < 7) {
               throw const FormatException('缺少有效班级编号 bjbh');
             }
-            final existing = sessionsThisDay[classId];
-            if (existing != null) {
-              if (!existing.time.contains(period)) existing.time.add(period);
+            if (asString(rawClass["xkzt"]) == "12") continue;
+            final classSemester = asInt(rawClass["pkxq"]) ?? semester;
+            final weeks = _parseWeeks(asString(rawClass["zc"]) ?? '');
+            final key = (
+              classId,
+              classSemester,
+              weeks.join(','),
+              asString(rawClass["cdmc"]),
+              asString(rawClass["jzgId"]) ?? asString(rawClass["xm"])
+            );
+            final existing = latest[key];
+            if (existing != null && existing.time.last >= period - 1) {
+              if (existing.time.last != period) existing.time.add(period);
               continue;
             }
-            if (asString(rawClass["xkzt"]) == "12") continue;
-
-            final classSemester = asInt(rawClass["pkxq"]) ?? semester;
             final session = Session.empty()
               ..id = classId.substring(0, 7)
               ..name = asString(rawClass["kcmc"]) ?? '未知课程'
@@ -548,7 +556,6 @@ class GrsNew {
               session.firstHalf = session.secondHalf = true;
             }
 
-            final weeks = _parseWeeks(asString(rawClass["zc"]) ?? '');
             if (weeks.isEmpty) {
               session.oddWeek = session.evenWeek = true;
             } else {
@@ -568,7 +575,8 @@ class GrsNew {
                 }
               }
             }
-            sessionsThisDay[classId] = session;
+            latest[key] = session;
+            sessions.add(session);
           } on Object catch (error, stackTrace) {
             if (kDebugMode) {
               debugPrint('$context：跳过星期 $day 第 $period 节的第 ${index + 1} 条课程：'
@@ -577,12 +585,11 @@ class GrsNew {
           }
         }
       }
-      sessions.addAll(sessionsThisDay.values);
     }
     return sessions;
   }
 
-  List<int> _parseWeeks(String raw) {
+  static List<int> _parseWeeks(String raw) {
     final weeks = <int>{};
     final rangePattern = RegExp(r'(\d+)\s*[-~至]\s*(\d+)');
     for (final match in rangePattern.allMatches(raw)) {
